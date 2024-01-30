@@ -1,0 +1,545 @@
+clear
+set more off
+cls
+*Import data
+kobo2stata using "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\STATA clinical template.xlsx", ///\DRS\eforms\current CRFs 7th-Oct
+xlsform("C:\Users\HP\Desktop\\DRS\eforms\current CRFs 7th-Oct\up dated clinical form 11-Oct.xlsx") dropnotes usenotsave
+drop sputum_date_s-remarks_b // drop unused variable
+br
+* Drop practice data
+drop if _index<=7 | _index==10 |  _index==31 | _index==32 | _index==33 | _index==21 | _index==24 | _index==28 ///
+| _index==22 | _index==23  | _index==71 | _index==72 | _index==73 ///
+| _index==138 | _index==144 | _index==137 | _index==138 | _index==138 | _index==140 | _index==141 ///
+| _index==172 | _index==173 |  _index==52 | _index==50 | _index==83 |_index==449
+
+***Queries
+* Drop repeat enrolment
+drop if _index==481 // repeat enrolment at Fort Portal RRH but originally from Busaru HC III
+drop if _index==683 // repeat enrolment at Jinja RRH but originally Kidera HC IV
+drop if _index==838 // repeat enrolment for a LTFU after enrollment in the early days of the survey
+
+* Drop duplicate records
+drop if _index==93 // duplicated enrolment at Nsinze HC IV
+drop if _index==396 // duplicated enrolment at Jinja RRH
+drop if _index==545 // drop duplicate screening (failure) at Apapai HC IV
+*wronng scr_date 
+replace date=td(06jul2023) if _index==64 
+
+*Replace wrong scr_id
+replace scr_id="SCR-100-08-001" if  _index==148
+replace scr_id="SCR-100-33-002" if  _index==162
+replace scr_id="SCR-704-03-001" if  _index==104
+replace scr_id="SCR-100-24-001" if  _index==174
+replace scr_id="SCR-100-33-001" if  _index==135
+replace scr_id="SCR-207-57-006" if  _index==30
+replace scr_id="SCR-301-01-004" if  _index==69
+replace scr_id="SCR-301-01-001" if  _index==84
+replace scr_id="SCR-301-01-005" if  _index==70
+replace scr_id="SCR-301-01-002" if  _index==85
+replace scr_id="SCR-301-01-023" if  _index==214
+replace scr_id="SCR-812-03-001" if  _index==38
+replace scr_id="SCR-812-03-009" if  _index==82
+replace scr_id="SCR-812-03-010" if  _index==139
+replace scr_id="SCR-812-03-014" if  _index==185
+replace scr_id="SCR-999-99-007" if  _index==207
+replace scr_id="SCR-812-03-012" if  _index==178
+replace scr_id="SCR-100-08-002" if _index==188
+replace scr_id="SCR-903-11-002" if _index==199
+replace scr_id="SCR-705-19-001" if _index==201
+replace scr_id="SCR-802-11-005" if _index==227
+replace scr_id="SCR-802-11-005" if _index==234
+replace scr_id="SCR-904-06-001" if _index==238
+replace scr_id="SCR-414-03-005" if _index==240
+replace scr_id="SCR-701-01-006" if _index==260
+replace scr_id="SCR-414-03-003" if _index==195
+replace scr_id="SCR-802-11-004" if _index==227
+replace scr_id="SCR-807-28-012" if _index==171
+replace scr_id="SCR-812-03-002" if _index==39
+replace scr_id="SCR-605-01-001" if _index==62
+replace scr_id="SCR-605-01-003" if _index==110
+replace scr_id="SCR-903-11-003" if _index==226
+replace scr_id="SCR-999-99-001" if _index==99
+replace scr_id="SCR-812-03-011" if _index==165
+replace scr_id="SCR-812-03-015" if _index==236
+replace scr_id="SCR-802-11-009" if _index==416
+replace scr_id="SCR-807-28-007" if _index==437
+replace scr_id="SCR-812-03-013" if _index==225
+replace scr_id="SCR-804-34-006" if _index==526
+replace scr_id="SCR-804-34-008" if _index==649
+replace scr_id="SCR-403-03-006" if _index==655
+replace scr_id="SCR-411-24-018" if _index==613
+replace scr_id="SCR-301-01-042" if _index==367
+replace scr_id="SCR-301-01-045" if _index==383
+replace scr_id="SCR-701-01-003" if _index==160
+replace scr_id="SCR-605-01-010" if _index==446
+replace scr_id="SCR-704-35-015" if _index==770
+replace scr_id="SCR-704-35-016" if _index==771
+
+*Replace wrong parient name
+replace scn_name="Opio Emmanuel" if _index==43
+replace scn_name="PETER OMARA" if _index==530
+replace scn_name="OJUKA DENIS" if _index==617
+replace scn_name="NYAGAK RIEK" if _index==164
+replace scn_name="KABANYAN FATUMA" if _index==197
+replace scn_name="Mayombo Onesmus" if _index==674
+replace scn_name="FRED KABOGERE" if _index==737
+replace scn_name="ALINDE PAUL" if _index==764
+
+*Replace wrong/duplicate pids
+replace pid="414-03-02" if _index==170
+replace pid="301-01-09" if _index==130
+replace pid="802-11-09" if _index==416
+replace pid="301-01-29" if _index==340
+replace pid="807-28-07" if _index==437
+replace pid="403-03-06" if _index==655
+replace pid="802-11-15" if _index==632
+replace pid="301-01-71" if _index==682
+replace pid="999-99-09" if _index==693
+replace pid="301-01-64" if _index==608
+replace pid="704-03-05" if _index==663
+replace pid="704-35-14" if _index==770
+replace pid="704-35-15" if _index==771
+
+
+*correct screening id with 2 digit participant number to 3 digits
+gen len=strlen(scr_id)
+gen w=substr(scr_id,-2,.) if len==13
+gen v=substr(scr_id,1,11) if len==13
+gen t="0"
+replace scr_id=v+t+w if len==13
+br scr_id v w if len<13 
+drop v w t len
+gen len=strlen(scr_id)
+br if len!=14
+br pid scn_name gene_xpert patient_phone_num other_phone_num other_phone_name _index if gene_xpert==2
+*Wrong geneXpert results
+* 1= MTB, RR not detected 2= MTB, RR detected 3= MTB, RR  indeterminate
+* 4=MTB positive trace, RR indeterminate 5=MTB, RR indeterminate 0=Not done
+
+* Replace MTB, RR  indeterminate
+ replace gene_xpert=5 if gene_xpert==3
+
+* Browse all true RRs from the field
+br pid scn_name gene_xpert _index if  pid=="700-01-02" &   pid=="207-57-06" ///
+&  pid=="301-01-11" &   pid=="301-01-17" &  pid=="811-02-02" &   pid=="700-01-14" ///
+&  pid=="700-01-09" &   pid=="700-01-26" &  pid=="700-01-25" &   pid=="701-01-04" ///
+&  pid=="700-01-28" &   pid=="997-01-15" &  pid=="999-99-08" &   pid=="802-11-08" ///
+&  pid=="700-01-30" &   pid=="807-01-13" &  pid=="202-01-36" & gene_xpert == 2
+
+* Browse all false RRs from the field
+br pid scn_name gene_xpert _index if  pid!="700-01-02" |   pid!="207-57-06" ///
+|  pid!="301-01-11" |   pid!="301-01-17" |  pid!="811-02-02" |   pid!="700-01-14" ///
+|  pid!="700-01-09" |   pid!="700-01-26" |  pid!="700-01-25" |   pid!="701-01-04" ///
+|  pid!="700-01-28" |   pid!="997-01-15" |  pid!="999-99-08" |   pid!="802-11-08" ///
+|  pid!="700-01-30" |   pid!="807-01-13" |  pid!="202-01-36" & gene_xpert == 2
+
+* Replace false RRs with correct field xpert result
+replace gene_xpert=1 if pid=="700-01-01"
+replace gene_xpert=1 if pid=="700-01-03"
+replace gene_xpert=1 if pid=="804-34-01"
+replace gene_xpert=1 if pid=="605-01-01"
+replace gene_xpert=1 if pid=="504-06-01"
+replace gene_xpert=1 if pid=="700-01-07"
+replace gene_xpert=1 if pid=="700-01-10"
+replace gene_xpert=1 if pid=="700-01-11"
+replace gene_xpert=1 if pid=="414-03-03"
+replace gene_xpert=1 if pid=="411-24-05"
+replace gene_xpert=1 if pid=="603-12-01"
+replace gene_xpert=4 if pid=="414-03-08"
+replace gene_xpert=1 if pid=="605-01-05"
+replace gene_xpert=1 if pid=="605-01-06"
+replace gene_xpert=1 if pid=="606-03-07"
+replace gene_xpert=1 if pid=="503-05-05"
+replace gene_xpert=1 if pid=="603-12-02"
+replace gene_xpert=0 if pid=="100-24-02"
+replace microscopy=1 if pid=="100-24-02"
+replace gene_xpert=1 if pid=="804-34-03"
+replace gene_xpert=1 if pid=="700-01-08"
+replace gene_xpert=1 if pid=="202-01-63"
+
+* MTB not detected
+replace gene_xpert=. if pid=="700-01-12"
+replace gene_xpert=. if pid=="700-01-05"
+* Follow-up needed
+* RF confirms these were false RR detected but could not get the results
+* Katusabe Jennifer
+replace gene_xpert=1 if pid=="700-01-06" 
+*Kajubu Edward
+replace gene_xpert=1 if pid=="700-01-13"
+***
+
+*br selected_facility_s scr_no scr_id _index if scr_id=="Error"
+* Replace NAs in selected_district replicated with values in selected_region   
+replace selected_region=selected_region_s if selected_region==.
+replace selected_district=selected_district_s if selected_district==.
+replace selected_facility=selected_facility_s if selected_facility==""
+gen category="Previously Treated" if prev_tb_drug==1
+replace category="New" if prev_tb_drug==0 //| prev_tb_drug==.
+replace category="Unknown" if  prev_tb_drug==-999
+tab category, mi
+
+*joining 2 names especially first version that had them separated
+gen space = " "
+gen name_patient=fname_patient + space + lname_patient
+replace scn_name=name_patient if scn_name==""
+
+*Facility names from Facility number
+gen facility="Alerek HC III" if selected_facility=="503-05"
+replace facility="Lira Kato HC III" if selected_facility=="814-25"
+replace facility="Amugu HC III" if selected_facility=="811-02"
+replace facility="Buikwe HC III" if selected_facility=="414-03"
+replace facility="Irundu St. Mathias Mulumba HC III" if selected_facility=="316-01"
+replace facility="Kyabirukwa HC III" if selected_facility=="613-05"
+replace facility="Buhara HC III" if selected_facility=="606-03"
+replace facility="Bwikara HC III" if selected_facility=="704-03"
+replace facility="Obalanga HC III" if selected_facility=="408-07"
+replace facility="Myanzi HC III" if selected_facility=="211-31"
+replace facility="Kumi (Ongino) Hospital" if selected_facility=="998-04"
+replace facility="Bufumbo HC IV" if selected_facility=="401-08"
+replace facility="UPDF 2nd Div.HC IV" if selected_facility=="603-12"
+replace facility="Kapir HC III" if selected_facility=="402-07"
+replace facility="Kulikulnga HC III" if selected_facility=="904-06"
+replace facility="Robidire HC III" if selected_facility=="903-11"
+replace facility="Paimol HC III" if selected_facility=="814-29"
+replace facility="Galimagi (Butebo) HC III" if selected_facility=="619-09"
+replace facility="Kidera HC IV" if selected_facility=="316-17"
+replace facility="Mpeefu B HC III" if selected_facility=="704-35"
+replace facility="Reachout Kinawataka Clinic HC II" if selected_facility=="100-33"
+replace facility="Holy Cross Orthodox Mission Namungoona Hospital" if selected_facility=="100-24"
+replace facility="Bigodi HC III" if selected_facility=="705-19"
+replace facility="St.Joseph's Kitgum Hospital" if selected_facility=="804-34"
+replace facility="Hapuuyo HC III" if selected_facility=="708-03"
+replace facility="Butiru Chrisco (UCMB)HC III" if selected_facility=="406-30"
+replace facility="Lwampanga HC III" if selected_facility=="207-57"
+replace facility="Nsinze HC IV" if selected_facility=="311-01"
+replace facility="Apapai HC IV" if selected_facility=="403-03"
+replace facility="Buwambo HC IV" if selected_facility=="999-99"
+replace facility="Muyembe HC IV" if selected_facility=="411-24"
+replace facility="Busaru HC IV" if selected_facility=="701-01"
+replace facility="Fort Portal Regional Referral Hospital" if selected_facility=="700-01"
+replace facility="Jinja Regional Referral Hospital" if selected_facility=="301-01"
+replace facility="Kathile HC III" if selected_facility=="504-06"
+replace facility="Mulago NRH-PIDC COE Baylor Clinic" if selected_facility=="100-60"
+replace facility="Mulago NRH- Infectious Disease Institute" if selected_facility=="100-08"
+replace facility="Murchision Bay Main Hospital" if selected_facility=="100-22"
+replace facility="Mt.St Marys Hospital" if selected_facility=="607-02"
+replace facility="Busana HC III" if selected_facility=="030-02"
+replace facility="Aboke HC IV" if selected_facility=="812-03"
+replace facility="Kyegegwa Hospital" if selected_facility=="807-01"
+replace facility="Namakwekwe HC III" if selected_facility=="401-26"
+replace facility="Mpigi HC IV" if selected_facility=="200-38"
+replace facility="Mubende Regional Referral Hospital" if selected_facility=="202-01"
+replace facility="Bobi HC III" if selected_facility=="802-11"
+replace facility="Minakulu HC III" if selected_facility=="807-28"
+replace facility="Karoli Lwanga (Nyakibale) Hospital" if selected_facility=="605-01"
+replace facility="Kitagata Hospital" if selected_facility=="997-01"
+replace facility="Budadiri HC IV" if selected_facility=="413-03"
+order facility, after(selected_district)
+
+
+replace num_meals_n=num_meals if num_meals_n==.
+*errors in bmi calculation
+replace num_people=1 if pid=="311-01-02"
+replace num_people=3 if pid=="301-01-21"
+replace wight=64 if pid=="607-02-01"
+replace height=164 if pid=="607-02-01"
+replace height=155 if pid=="613-05-01"
+replace wight=50 if pid=="202-01-11"
+replace height=170 if pid=="202-01-11"
+
+gen bmi=wight/((height/100)^2)
+*Check Outliers
+
+fre scn_age sick_duration wight height bmi num_meals_n num_people num_rooms 
+br date pid selected_district_s facility name_interviewer scn_name num_people if num_people>=13 & num_people!=.
+br date pid selected_district_s facility name_interviewer scn_name num_rooms if num_rooms>=7 & num_rooms!=.
+br date pid selected_district_s facility name_interviewer scn_name scn_age wight height bmi if bmi>=30 & bmi!=.
+br date pid selected_district_s facility name_interviewer scn_name sick_duration if sick_duration>=30 & sick_duration!=.
+
+* Replace undone RBS due to no RBS strips
+
+replace blood_sugar=. if pid=="202-01-35" 
+replace blood_sugar=. if pid=="202-01-36" 
+replace blood_sugar=. if pid=="202-01-37" 
+replace blood_sugar=. if pid=="202-01-38" 
+replace blood_sugar=. if pid=="202-01-39" 
+replace blood_sugar=. if pid=="202-01-40" 
+replace blood_sugar=. if pid=="202-01-41" 
+replace blood_sugar=. if pid=="202-01-42" 
+replace blood_sugar=. if pid=="202-01-43" 
+replace blood_sugar=. if pid=="804-34-05" 
+replace blood_sugar=. if pid=="202-01-51" 
+replace blood_sugar=. if pid=="202-01-52"
+replace blood_sugar=. if pid=="202-01-53"
+replace blood_sugar=. if pid=="202-01-54"
+replace blood_sugar=. if pid=="202-01-55"
+replace blood_sugar=. if pid=="202-01-56"
+replace blood_sugar=. if pid=="202-01-57"
+
+
+replace blood_sugar=15 if pid=="812-03-14" // value greater than set limit
+replace blood_sugar=2.5 if pid=="606-03-12" // Value less than set limit
+
+*Screening failures
+*Reasons for failure
+gen reason="More than 28days" if prev_drug_period==1
+replace reason="More than 7 days" if curr_drug_period==2
+replace reason="Refused to consent" if consent==0
+replace reason="Unknown medical record" if med_records==0 | prev_drug_period==-999
+br date scr_id pid selected_district_s facility name_interviewer scn_name prev_drug_period reason _index if consent==1 & reason!="" & reason!="More than 28days" //MORE THAN 28 DAYS IS OKAY
+tab reason consent, miss
+br  date scr_id selected_district_s facility name_interviewer scn_name category prev_drug_period curr_drug_period reason _index if consent==0 | consent==.
+export excel using "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\stata_rsn_fail.xlsx" if consent==0 | consent==., firstrow(variables) replace
+
+sort reason
+order reason, before(consent)
+*br  if (consent==0 | consent==.) //& reason==""
+duplicates tag pid, gen(dup)
+tab dup
+sort pid
+br  date scr_id pid selected_district_s facility name_interviewer scn_name _index if dup>=1 & pid !=""
+* Edit duplicates
+duplicates tag scr_id, gen(dup2)
+sort scr_id
+br  date scr_id pid selected_district_s facility name_interviewer scn_name _index if dup2>=1 & scr_id !=""
+
+*Confirm no duplicates
+*isid scr_id
+drop dup dup2
+sort pid
+duplicates drop pid if pid !="", force
+
+*ALL(elligible + inelligible)
+preserve
+*gen screened="SCREENED"
+*collapse (count) _index
+export excel using "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\stata_screening.xlsx", firstrow(variables) replace
+export excel using "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\stata_screening_rep.xlsx", firstrow(variables) replace
+restore
+
+*keep only elligible
+keep if consent==1
+isid pid
+sort pid
+br facility pid scn_name name_interviewer gene_xpert _index if gene_xpert==2
+
+save "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\stata_enrolled_clean", replace
+export excel using "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\stata_enrolled_clean.xlsx", firstrow(variables) replace
+
+
+kobo2stata using "C:\Users\HP\Desktop\DRS\Data versions\template_data\sample collection\STATA sample collection template.xlsx", ///
+xlsform("C:\Users\HP\Desktop\DRS\eforms\current CRFs 7th-Oct\sample collection_7th_Nov.xlsx") dropnotes usenotsave
+drop pretb_rnum-_tags
+
+* drop data.... Y
+
+br if _index==16 | _index==52 | _index==56 | _index==125 | _index==117 | _index==74 | _index==90 ///
+| _index==104 | _index==176 | _index== 184 
+
+drop if _index==16 | _index==52 | _index==56 | _index==125 | _index==117 | _index==74 | _index==90 ///
+| _index==104 | _index==176 | _index== 184
+
+replace sample_type_1="1" if patient_id=="997-01-02" | patient_id=="802-11-24"| patient_id=="802-11-25"
+replace sample_type_12=0 if patient_id=="997-01-02" | patient_id=="802-11-24"| patient_id=="802-11-25"
+replace collect_date_2=. if patient_id=="997-01-02" | patient_id=="802-11-24"| patient_id=="802-11-25"
+replace collect_time_2="" if patient_id=="997-01-02" | patient_id=="802-11-24"| patient_id=="802-11-25"
+replace volume_s_2=. if patient_id=="997-01-02" | patient_id=="802-11-24"| patient_id=="802-11-25"
+duplicates tag pid, gen(dup1)
+tab dup1
+sort pid
+br begin_time selected_district pid sample_type_11  collect_date_1 collect_time_1 volume_s_1 sample_type_12 collect_date_2 collect_time_2 volume_s_2 collected_blood _index if dup>=1
+drop dup1 _index
+duplicates drop pid, force
+save "C:\Users\HP\Desktop\DRS\Data versions\template_data\sample collection\STATA sample collection", replace
+
+
+
+kobo2stata using "C:\Users\HP\Desktop\DRS\Data versions\template_data\sample shipment\STATA sample shipment template.xlsx", ///
+xlsform("C:\Users\HP\Desktop\DRS\eforms\current CRFs 7th-Oct\sample shipment_7th_Nov.xlsx") dropnotes usenotsave
+
+
+rename (sample_type_1 sample_type_11 sample_type_12 ship_blood) (sample_type_1_s sample_type_11_s sample_type_12_s ship_blood_s)
+
+drop if _index==15 | _index==17 | _index==62 | _index==110  | _index==170  | _index==171
+
+duplicates tag pid, gen(dup3)
+tab dup3
+sort pid
+br begin_time selected_district pid p_name_s  volume_s1 shipp_date_s2 shipp_date_b  _index if dup3>=1
+duplicates drop pid, force
+drop dup3 _index
+duplicates drop pid, force
+save "C:\Users\HP\Desktop\DRS\Data versions\template_data\sample shipment\STATA sample shipment", replace
+
+* Merging data sets
+use "C:\Users\HP\Desktop\DRS\Data versions\template_data\clinical\stata_enrolled_clean",clear
+gen clinical_index = _index 
+merge 1:1 pid using "C:\Users\HP\Desktop\DRS\Data versions\template_data\sample collection\STATA sample collection", gen(merge_coll) force
+merge 1:1 pid using "C:\Users\HP\Desktop\DRS\Data versions\template_data\sample shipment\STATA sample shipment", gen(merge_ship) force
+* drop if merge_coll==2 | merge_ship==2
+gen test="Microscopy" if microscopy!=.
+replace test="Gene Xpert" if gene_xpert>0 & gene_xpert<=5
+replace smoking_duration=3650 if _index==20
+replace alcohol_duration=alcohol_duration*365 if alcohol_duration_units==3
+
+replace num_meals=num_meals_n if num_meals==.
+
+replace gender=scn_gender if gender==.
+replace age=scn_age if age==.
+format %td begin_time date
+gen diff_day= round(((date-begin_time)-3651.6),1)
+
+drop selected_district_s selected_facility_s selected_region_s scn_gender  ///
+scn_age scr_no pin start sputum_s1_collected-sputum2_time alcohol_duration_units smoking_duration_units ///
+num_meals_n _id-_tags patient_id
+
+gen stratum="1(10-19)" if selected_facility=="503-05"
+replace stratum="1(10-19)" if selected_facility=="814-25"
+replace stratum="1(10-19)" if selected_facility=="811-02"
+replace stratum="1(10-19)" if selected_facility=="414-03"
+replace stratum="1(10-19)" if selected_facility=="316-01"
+replace stratum="1(10-19)" if selected_facility=="613-05"
+replace stratum="1(10-19)" if selected_facility=="606-03"
+replace stratum="1(10-19)" if selected_facility=="704-03"
+replace stratum="1(10-19)" if selected_facility=="408-07"
+replace stratum="1(10-19)" if selected_facility=="211-31"
+replace stratum="1(10-19)" if selected_facility=="998-04"
+replace stratum="1(10-19)" if selected_facility=="401-08"
+replace stratum="1(10-19)" if selected_facility=="603-12"
+replace stratum="1(10-19)" if selected_facility=="402-07"
+replace stratum="1(10-19)" if selected_facility=="904-06"
+replace stratum="2(20-29)" if selected_facility=="903-11"
+replace stratum="2(20-29)" if selected_facility=="814-29"
+replace stratum="2(20-29)" if selected_facility=="619-09"
+replace stratum="2(20-29)" if selected_facility=="316-17"
+replace stratum="2(20-29)" if selected_facility=="704-35"
+replace stratum="2(20-29)" if selected_facility=="100-33"
+replace stratum="2(20-29)" if selected_facility=="100-24"
+replace stratum="2(20-29)" if selected_facility=="705-19"
+replace stratum="2(20-29)" if selected_facility=="804-34"
+replace stratum="2(20-29)" if selected_facility=="708-03"
+replace stratum="2(20-29)" if selected_facility=="406-30"
+replace stratum="2(20-29)" if selected_facility=="207-57"
+replace stratum="2(20-29)" if selected_facility=="311-01"
+replace stratum="2(20-29)" if selected_facility=="403-03"
+replace stratum="2(20-29)" if selected_facility=="999-99"
+replace stratum="3(30+)"  if selected_facility=="411-24"
+replace stratum="3(30+)"  if selected_facility=="701-01"
+replace stratum="3(30+)"  if selected_facility=="700-01"
+replace stratum="3(30+)"  if selected_facility=="301-01"
+replace stratum="3(30+)"  if selected_facility=="504-06"
+replace stratum="3(30+)"  if selected_facility=="100-60"
+replace stratum="3(30+)"  if selected_facility=="100-08"
+replace stratum="3(30+)"  if selected_facility=="100-22"
+replace stratum="3(30+)"  if selected_facility=="607-02"
+replace stratum="3(30+)"  if selected_facility=="030-02"
+replace stratum="3(30+)"  if selected_facility=="812-03"
+replace stratum="3(30+)"  if selected_facility=="807-01"
+replace stratum="3(30+)"  if selected_facility=="401-26"
+replace stratum="3(30+)"  if selected_facility=="200-38"
+replace stratum="3(30+)"  if selected_facility=="202-01"
+replace stratum="3(30+)"  if selected_facility=="802-11"
+replace stratum="3(30+)"  if selected_facility=="807-28"
+replace stratum="3(30+)"  if selected_facility=="605-01"
+replace stratum="3(30+)"  if selected_facility=="997-01"
+replace stratum="3(30+)"  if selected_facility=="413-03"
+encode stratum , gen(strata)
+drop stratum
+order begin_time date diff_day selected_region selected_district facility strata
+
+bys category strata: gen a=_N 
+gen b=191 if strata==1
+replace b=179 if strata==2
+replace b=930 if strata==3
+gen c=(a*100)/b
+br strata  category a b c
+
+egen num_samples=rowtotal(sample_type_11 sample_type_12), missing
+gen sample_num="1" if num_samples==1
+replace sample_num="2" if num_samples==2
+replace sample_num="Pending submission" if num_samples==.
+replace sample_num="No samples" if sample_type_13==1
+
+
+egen shipped_samples=rowtotal(sample_type_11_s sample_type_12_s), missing	
+gen ship_num="1" if shipped_samples==1
+replace ship_num="2" if shipped_samples==2
+replace ship_num="Pending submission" if shipped_samples==.
+*replace ship_num="No sputum collected if sample_type_13_s==1
+gen blood_shipped="Yes" if ship_blood_s==1
+replace blood_shipped="No" if ship_blood_s==0
+replace blood_shipped="Pending submission" if ship_blood_s==.
+
+replace collected_blood=9 if collected_blood==.
+lab def ynm 1 "Yes" 0 "No" 9 "Pending submission"
+lab val collected_blood ynm
+gen tats1=shipp_date_s1-collect_date_1 
+gen tats2=shipp_date_s2-collect_date_2
+gen tatsb=shipp_date_b-collect_date_b
+keep if consent==1
+br  if merge_coll!=3 | merge_ship!=3
+tab1 merge_coll merge_ship
+br date facility pid scn_name name_interviewer if merge_coll==1
+
+br date facility pid scn_name name_interviewer if merge_ship==1
+
+gen now=c(current_date)
+gen today=date(now, "DMY")
+format today %td
+gen days=today-date
+gen week_r=floor(days/7)
+egen max=max(week_r)
+gen week=(max+1)-week_r
+preserve
+keep if category=="New"
+gen N=_N
+bys week: gen n_enrolled=_N
+sort week_r
+gen target= round((1300-N)/(30-week),1)
+export excel using "C:\Users\HP\Desktop\DRS against.xlsx", firstrow(variables) replace
+drop today days week_r max
+restore 
+
+preserve
+keep if category=="New"
+collapse (count) date, by(week)
+gen p=sum(date)
+gen sample=1300
+gen time=30-_n
+gen target=round(((sample-p)/time),1)
+gen percent=round(((p*100)/target), .1)
+gen balance=sample-p
+egen avg_round=mean(date) if week>=6
+gen avg=round(avg_round) if week>=6
+gen need=round(balance/avg)
+export excel using "C:\Users\HP\Desktop\DRS Target.xlsx", firstrow(variables) replace
+restore
+
+export excel using "C:\Users\HP\Desktop\DRS data.xlsx", firstrow(variables) replace
+
+*drop  begin_time diff_day _index num_samples tats1 tats2 tatsb category	test
+
+drop  begin_time diff_day _index num_samples tats1 tats2 tatsb test
+
+export excel using "C:\Users\HP\Desktop\DRS Clinical data_clean.xlsx", firstrow(variables) replace
+save "C:\Users\HP\Desktop\DRS Clinical data_clean", replace 
+
+use "C:\Users\HP\Desktop\DRS Clinical data_clean",clear
+rename date_001 screening_date
+gen month="June_2023"
+replace month = "July_2023" if month(end)==7
+replace month = "Aug_2023" if month(end)==8
+replace month = "Sep_2023" if month(end)==9
+replace month = "Oct_2023" if month(end)==10
+replace month = "Nov_2023" if month(end)==11
+replace month = "Dec_2023" if month(end)==12
+replace month = "Jan_2024" if month(end)==1
+br end date facility scn_name pid gene_xpert microscopy sputum1_date  sputum_s2_collected_e why_one ship_blood_s shipp_date_s1 category strata month clinical_index
+export excel end date facility scn_name pid gene_xpert microscopy sputum1_date  sputum_s2_collected_e why_one ship_blood_s shipp_date_s1 category strata month clinical_index using "C:\Users\HP\Desktop\DRS_lab_data_google sheet", firstrow(variables) replace
+
+save "C:\Users\HP\Desktop\DRS data google sheet", replace
+tab category
+tab strata if category=="New"
+
+* br date facility pid scn_name gene_xpert if gene_xpert==5
+* clear
