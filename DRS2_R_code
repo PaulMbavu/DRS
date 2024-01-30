@@ -1,0 +1,274 @@
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+# library(ggtree)
+# library(phyloseq)
+#install.packages("ggtree")
+# install.packages("treeio")
+
+#if (!require("BiocManager", quietly = TRUE))
+#  install.packages("BiocManager")
+
+# BiocManager::install("treeio")
+
+
+
+rm(list = ls())
+# FIELD DAILY REPORTS ANALYSIS
+field_reports <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Summary/clean_daily_report.xlsx')
+# colnames(field_reports)
+length(field_reports$f_code)
+length(unique(field_reports$f_code))
+field_reports$f_code[duplicated(field_reports$f_code)]
+#field_reports <- field_reports[!duplicated(field_reports$f_code), ]
+#field_reports <- my_data[!duplicated(my_data$Sepal.Width), ]
+# All that submitted
+submitted<-field_reports[c("f_name","f_code","PBCs+","screened","enrolled","excluded","sputum_collected","blood_collected","shipped")]
+# All facilities (50)
+all_facilities <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Summary/report_template_all_facilities.xlsx')
+#submitted_with no error in IDs
+actual_submitted <- submitted %>%  filter(submitted$f_code%in%all_facilities$f_code)
+# submitted with errors in ID
+errored_IDs <- submitted %>%  filter(!submitted$f_code%in%actual_submitted$f_code)
+errored_IDs$f_code
+# not submitted
+not_submitted <- all_facilities%>%  filter(!all_facilities$f_code%in%submitted$f_code)
+# save submitted file as csv
+write.csv(submitted,'C:/Users/HP/Desktop/DRS/Summary/submitted.csv')
+# save not_submitted file as csv
+write.csv(not_submitted,'C:/Users/HP/Desktop/DRS/Summary/not_submitted.csv')
+
+
+
+# CURRENT KOBO DATA ANALYSIS
+# load test data
+test_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/Dropped observations.xlsx')
+# load current clinical data
+current_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/template.xlsx')
+current_data <- current_data[, -c(114:222)]
+colnames(current_data)
+# write.csv(current_data,'C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/current_data.csv')
+new_current <- current_data %>% filter(!current_data$`_index`%in%test_data$`_index`) 
+colnames(new_current)
+extracted <- new_current[c("_submission_time","scr_id","date","selected_region","selected_region_s","selected_district","selected_district_s","selected_facility","selected_facility_s","scn_name","pid","gene_xpert","microscopy","sputum1_date_e","sputum_s2_collected_e","why_one","_index")]
+#extract screening failures
+screenin_failures <- extracted %>% filter(is.na(pid))
+# save failures as csv
+write.csv(screenin_failures,'C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/screenin_failures.csv')
+# Remove screening failures (NAs in enrollment ID )
+enrolled <- extracted %>% filter(!is.na(pid))
+# number of unique IDs
+length(unique(extracted$pid))
+dups <- enrolled$pid[duplicated(enrolled$pid)]
+# drop duplicate IDs
+enrolled_no_dups <- enrolled %>% filter(!enrolled$pid%in%dups)
+write.csv(enrolled_no_dups,'C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/enrolled_no_dups.csv')
+# All participants (bind enrolled and failures)
+all_screened <- enrolled_no_dups %>% bind_rows(screenin_failures)
+# save all participants file as csv
+write.csv(all_screened,'C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/all_screened.csv')
+dups
+dup_records <-  enrolled %>% filter(enrolled$pid%in%dups)
+write.csv(dup_records,'C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/dup_records.csv')
+
+# Sample shipment analysis
+# load sample collection data
+shipment_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/template_data/sample shipment/shipment template.xlsx')
+# extract variables of interest
+colnames(shipment_data)
+shipped_extracted <- shipment_data[c("_submission_time","selected_facility","pid","p_name_s","sample_type_1","sample_type_1/1","sample_type_1/2","ship_blood","shipp_date_s1","shipp_date_s2","one_sample","no_blood_s")]
+# number of unique IDs
+length(unique(shipped_extracted$pid))
+dups <- shipped_extracted$pid[duplicated(shipped_extracted$pid)]
+# drop duplicate IDs
+shipped_no_dups <- shipped_extracted %>% filter(!shipped_extracted$pid%in%dups)
+# save shipment file as csv
+write.csv(shipped_no_dups,'C:/Users/HP/Desktop/DRS/Data versions/template_data/sample shipment/shipped_no_dups.csv')
+
+dup_ship_records <-  shipped_extracted %>% filter(shipped_extracted$pid%in%dups)
+write.csv(dup_ship_records,'C:/Users/HP/Desktop/DRS/Data versions/template_data/sample shipment/dup_ship_records.csv')
+
+
+# clinical - shipment analysis
+
+clinical_shipped <-  enrolled_no_dups %>% left_join(shipped_no_dups,by="pid")
+colnames(clinical_shipped)
+clinical_shipped <- clinical_shipped[c("_submission_time.x","_submission_time.y","selected_facility_s","scn_name","pid","gene_xpert","microscopy",
+                                       "sputum1_date_e","sputum_s2_collected_e","why_one","ship_blood","shipp_date_s1","p_name_s","_index")]
+write.csv(clinical_shipped,'C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/clinical_shipped.csv')
+
+
+
+
+
+# Sample collection analysis
+# load sample collection data
+collection_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/template_data/sample collection/collection_template.xlsx')
+colnames(collection_data)
+# extract variables of interest
+collection_extracted <- collection_data[c("_submission_time","selected_facility","pid","p_name_c","sample_type_1/1","sample_type_1/2","collected_blood","collect_date_1","collect_date_2","one_sample","no_blood_c")]
+# number of unique IDs
+length(unique(collection_extracted$pid))
+dups <- collection_extracted$pid[duplicated(collection_extracted$pid)]
+# drop duplicate IDs
+collected_no_dups <- collection_extracted %>% filter(!collection_extracted$pid%in%dups)
+# save collection file as csv
+write.csv(collected_no_dups,'C:/Users/HP/Desktop/DRS/Data versions/template_data/sample collection/collection_nodups.csv')
+
+
+
+# NTLP DATA
+# Method 2###############################################################
+# Load NTLP weekly data
+ntlp_data <- read.csv('C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/ntlp data/data (57).csv')
+#ntlp_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/DRS Week 39.xls') 
+# load last week's data
+DRS_wk_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/Adrian/weekly number enrolled 20st - 25th Nov.xlsx')
+#DRS_wk_data <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/Adrian/weekly number enrolled 10th -14thth Oct.xlsx')
+
+# load facilities present in both DRS and NTLP
+template <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/extracted_facilities.xlsx')
+# extract template DRS2 facilities in ntlp
+template_in_NTLP <- ntlp_data %>% filter(ntlp_data$orgunitlevel5%in%template$f_name) 
+# Join templateDRS2_in_NTLP to template
+merged_template_NTLP <- template_in_NTLP %>% left_join(template,by = c('orgunitlevel5'='f_name'))
+# Extract required columns
+colnames(merged_template_NTLP)
+merged_template_NTLP <- merged_template_NTLP[c("orgunitlevel5","X033B.TB05..Bacteriologically.TB.cases.registered","X033B.TB06..Bacteriologically..Confirmed.TB.cases.tested.with.GeneXpert","f_name_DRS")]
+
+# Extract facilities in both NTLP and DRS2 
+# merged_template_and_DRS2 <- merged_template_NTLP %>% left_join(DRS_wk_data,by = c('f_name_DRS'='facility'),type ="inner")
+merged_template_and_DRS2 <- merged_template_NTLP %>% inner_join(DRS_wk_data,by = c('f_name_DRS'='facility'))
+# Replace NAs with space to enable summation in excell
+merged_template_and_DRS2[is.na(merged_template_and_DRS2)] <- ""
+# save merged_template_and_DRS2 and edit required fields
+write.csv(merged_template_and_DRS2,'C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/weekly_both_DRS2_NTLP.csv')
+
+# Extract DRS2 facilities in DRS2 only
+weekly_DRS2_in_DRS2 <- DRS_wk_data %>% filter(!DRS_wk_data$facility %in% merged_template_and_DRS2$f_name_DRS)
+# save weekly_DRS2_in_DRS2 and edit required fields
+write.csv(weekly_DRS2_in_DRS2,'C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/weekly_DRS2_only.csv')
+
+# Extract facilities in NTLP only
+weekly_NTLP_notIn_DRS2 <- merged_template_NTLP %>% filter(!merged_template_NTLP$f_name_DRS %in% merged_template_and_DRS2$f_name_DR)
+# Replace NAs with space to enable summation in excel
+weekly_NTLP_notIn_DRS2[is.na(weekly_NTLP_notIn_DRS2)] <- ""
+# save merged_template_and_DRS2 and edit required fields
+write.csv(weekly_NTLP_notIn_DRS2,'C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/weekly_NTLP_only.csv')
+
+# Extract DRS2 facilities not in template
+all_facilities <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Summary/report_template_all_facilities.xlsx')
+template <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/ntlp_data/extracted_facilities.xlsx')
+not_inTemplate <- all_facilities %>% filter(!all_facilities$f_name %in% template$f_name_DRS)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 2021 DATA
+reports_2021 <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/2021_PBCs_notified.xlsx')
+length(reports_2021$f_code)
+length(unique(reports_2021$f_code))
+# show duplicates
+reports_2021$f_code[duplicated(reports_2021$f_code)]
+all_facilities <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Summary/report_template_all_facilities.xlsx')
+#submitted_with no error in IDs
+actual_submitted <- reports_2021 %>%  filter(reports_2021$f_code%in%all_facilities$f_code)
+# submitted with errors in ID
+errored_IDs <- reports_2021 %>%  filter(!reports_2021$f_code%in%actual_submitted$f_code)
+errored_IDs$f_code
+# not submitted
+not_submitted <- all_facilities%>%  filter(!all_facilities$f_code%in%actual_submitted$f_code)
+write.csv(actual_submitted,'C:/Users/HP/Desktop/DRS/Data versions/submitted_2021_reports.csv')
+write.csv(not_submitted,'C:/Users/HP/Desktop/DRS/Data versions/not_submitted_2021_reports.csv')
+
+# 2021 report Vs protocol figures comparison
+facility_strata <- read.csv('C:/Users/HP/Desktop/facility_stata.csv')
+Rf_data <- read.csv('C:/Users/HP/Desktop/DRS/Data versions/submitted_2021_reports.csv')
+Rf_data <- Rf_data[c("f_code","jan_21","feb_21","mar_21","april_21","may_21","jun_21","july_21","aug_21","sep_21","oct_21","nov_21","dec_21","Total")]
+facility_strata <- facility_strata[c("region","district","f_name","f_code","pbcs_2021","strata")]
+protocol_RFreports <- facility_strata %>% left_join(Rf_data,by = 'f_code')
+protocol_RFreports <- protocol_RFreports[c("region","district","f_name","f_code","jan_21","feb_21","mar_21","april_21","may_21","jun_21","july_21","aug_21","sep_21","oct_21","nov_21","dec_21","Total","pbcs_2021","strata")]
+write.csv(protocol_RFreports,'C:/Users/HP/Desktop/DRS/Data versions/comparision data/protocol_RFreports.csv')
+
+# Data analysis
+clean_data <- readxl::read_excel('C:/Users/HP/Downloads/DRS Clinical data_clean (1).xlsx')
+colnames(clean_data)
+extracted_clean <- clean_data[c("date","facility","pid","name_interviewer","gene_xpert","microscopy","sample_type_1","sample_type_11",
+                              "sample_type_12","one_sample","collect_date_1","collect_time_1","volume_s_1","collect_date_2","collect_time_2",
+                              "collected_blood","collect_date_b","collect_time_b","shipp_date_s1","shipp_time_s1","shipp_date_s2",
+                              "shipp_time_s2","ship_blood_s","shipp_date_b","shipp_time_b")]
+
+clean_data <- readxl::read_excel('C:/Users/HP/Downloads/DRS Clinical data_clean (1).xlsx')
+exxtracted <- readxl::read_excel('C:/Users/HP/Desktop/extracted.xlsx')
+
+new <- clean_data %>% left_join(exxtracted,by ='pid')
+nery <- new[c("date","facility.x","selected_facility","srn_name","scr_id","pid","gene_xpert","microscopy","collect_date_1","one_sample","collect_date_2","collected_blood","collect_date_b","shipp_date_s1")]
+write.csv(nery,'C:/Users/HP/Desktop/nery.csv')
+
+# anlyzed on request
+
+by_30_aug <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/Adrian/enrolled by 30-Aug.xlsx')
+all_facilities <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Summary/report_template_all_facilities.xlsx')
+not_enrolled <- all_facilities %>% filter(!all_facilities$f_name%in%by_30_aug$f_name)
+not_enrolled$f_name
+
+
+
+# extract new DRS2 facilities in ntlp
+# load template drs facilty_strata
+facility_strata <- read.csv('C:/Users/HP/Desktop/DRS/facilities_stata.csv')
+less_3 <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/Adrian/enrolment_less_or_3---.xlsx')
+joined <- less_3 %>% left_join(facility_strata,by ='f_name')
+write.csv(joined,'C:/Users/HP/Desktop/DRS/Data versions/Adrian/joines_enrolment_less_or_3.csv')
+
+
+enr <- read.csv('C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/enrolled_no_dups.csv')
+enr1 <- enr %>% left_join(facility_strata,by = c("selected_facility_s"='f_name'))
+enr1 <- enr1 %>% select("date","selected_facility_s","pid","Cluster","Strata")
+write.csv(enr1,'C:/Users/HP/Desktop/DRS/Data versions/Adrian/enrolment_by_strata.csv')
+
+# sample tracking
+
+ntrl_samples <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/Run folder/ntlrt_received_samples.xlsx')
+enrolled <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/template_data/clinical/stata_enrolled_clean.xlsx')
+enrolled <- enrolled %>% select("date","pid","scn_name","gene_xpert","microscopy","date_001")
+collected_delivered <- enrolled %>% inner_join(ntrl_samples,by = 'pid')
+
+#both <- enrolled %>% filter(enrolled$pid%in%ntrl_samples$pid)
+#ntrl22<- ntrl_samples%>%filter(!ntrl_samples$pid%in%enrolled$pid)
+
+enrolled_only <- enrolled %>% filter(!enrolled$pid%in%ntrl_samples$pid)
+lab_only <- ntrl_samples %>% filter(!ntrl_samples$pid%in%enrolled$pid)
+ntrl_2 <- readxl::read_excel('C:/Users/HP/Desktop/DRS/Data versions/Run folder/ntrl_2.xlsx')
+
+collected_delivered2 <- collected_delivered %>% left_join(sample_dup_records,by = 'pid')
+
+write.csv(lab_only,'C:/Users/HP/Desktop/DRS/Data versions/Run folder/lab_only02.csv')
+write.csv(enrolled_only,'C:/Users/HP/Desktop/DRS/Data versions/Run folder/enrolled_only.csv')
+write.csv(collected_delivered2,'C:/Users/HP/Desktop/DRS/Data versions/Run folder/collected_delivered2.csv')
+
+
+
+
+length(unique(ntrl_2$p_name))
+dups<-ntrl_2$p_name[duplicated(ntrl_2$p_name)]
+sample_dup_records <-  ntrl_2 %>% filter(!ntrl_2$p_name%in%dups)
+
+
+
+
+
+
+length(unique(ntrl_2$pid))
+dups<-ntrl_2$pid[duplicated(ntrl_2$pid)]
+sample_dup_records <-  ntrl_2 %>% filter(ntrl_2$pid%in%dups)
